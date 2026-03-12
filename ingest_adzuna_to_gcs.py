@@ -1,107 +1,179 @@
 import os
 import json
 import time
-from datetime import datetime
-from dotenv import load_dotenv
+import logging
+from datetime import datetime, timezone
+from typing import List, Dict, Any
+
 import requests
+from requests.adapters import HTTPAdapter
+from urllib3.util.retry import Retry
+from dotenv import load_dotenv
 from google.cloud import storage
 
 load_dotenv()
 
-APP_ID = os.getenv("ADZUNA_APP_ID")
-APP_KEY = os.getenv("ADZUNA_APP_KEY")
-BUCKET_NAME = os.getenv("GCS_BUCKET_NAME")
+# =========================
+# CONFIG
+# =========================
+ADZUNA_APP_ID = os.getenv("ADZUNA_APP_ID")
+ADZUNA_APP_KEY = os.getenv("ADZUNA_APP_KEY")
+GCS_BUCKET_NAME = os.getenv("GCS_BUCKET_NAME")
 
-BASE_URL = "https://api.adzuna.com/v1/api/jobs/fr/search"
+COUNTRY = "fr"
 SEARCH_TERM = "data engineer"
 RESULTS_PER_PAGE = 50
-MAX_PAGES_SAFETY = 10
-SLEEP_SECONDS = 3
+SLEEP_SECONDS = 3.0
+MAX_PAGES_SAFETY = 80  # garde-fou
+RAW_PREFIX = "raw-adzuna"
 
-if not APP_ID or not APP_KEY:
-    raise ValueError("ADZUNA_APP_ID ou ADZUNA_APP_KEY manquant dans le .env")
+BASE_URL = f"https://api.adzuna.com/v1/api/jobs/{COUNTRY}/search"
 
-if not BUCKET_NAME:
-    raise ValueError("GCS_BUCKET_NAME manquant dans le .env")
+# =========================
+# LOGGING
+# =========================
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s | %(levelname)s | %(message)s"
+)
+logger = logging.getLogger(__name__)
 
-all_jobs = []
-seen_ids = set()
 
-page = 1
-total_expected = None
+def validate_env() -> None:
+    missing = []
+    if not ADZUNA_APP_ID:
+        missing.append("ADZUNA_APP_ID")
+    if not ADZUNA_APP_KEY:
+        missing.append("ADZUNA_APP_KEY")
+    if not GCS_BUCKET_NAME:
+        missing.append("GCS_BUCKET_NAME")
 
-while page <= MAX_PAGES_SAFETY:
-    print(f"\n--- PAGE {page} ---")
+    if missing:
+        raise ValueError(f"Variables d'environnement manquantes : {', '.join(missing)}")
 
+
+def build_session() -> requests.Session:
+    session = requests.Session()
+    retries = Retry(
+        total=4,
+        backoff_factor=2,
+        status_forcelist=[429, 500, 502, 503, 504],
+        allowed_methods=["GET"],
+        raise_on_status=False,
+    )
+    adapter = HTTPAdapter(max_retries=retries)
+    session.mount("https://", adapter)
+    session.mount("http://", adapter)
+    return session
+
+
+def fetch_page(session: requests.Session, page: int) -> Dict[str, Any]:
     url = f"{BASE_URL}/{page}"
     params = {
-        "app_id": APP_ID,
-        "app_key": APP_KEY,
+        "app_id": ADZUNA_APP_ID,
+        "app_key": ADZUNA_APP_KEY,
         "what": SEARCH_TERM,
         "results_per_page": RESULTS_PER_PAGE,
-        "content-type": "application/json"
+        "content-type": "application/json",
     }
 
-    response = requests.get(url, params=params, timeout=30)
-    print("Status:", response.status_code)
+    logger.info("Appel API Adzuna page=%s", page)
+    response = session.get(url, params=params, timeout=30)
 
     if response.status_code != 200:
-        print("Erreur API :", response.text)
-        break
+        logger.error("Erreur API page=%s status=%s body=%s", page, response.status_code, response.text[:500])
+        response.raise_for_status()
 
-    data = response.json()
-    results = data.get("results", [])
+    return response.json()
 
-    if total_expected is None:
-        total_expected = data.get("count")
-        print("Total estimé API :", total_expected)
 
-    print("Nombre d'offres sur cette page :", len(results))
+def upload_string_to_gcs(bucket_name: str, blob_name: str, content: str, content_type: str) -> None:
+    client = storage.Client()
+    bucket = client.bucket(bucket_name)
+    blob = bucket.blob(blob_name)
+    blob.upload_from_string(content, content_type=content_type)
+    logger.info("Upload terminé : gs://%s/%s", bucket_name, blob_name)
 
-    if not results:
-        print("Plus de résultats, arrêt.")
-        break
 
-    for job in results:
-        job_id = job.get("id")
-        if job_id not in seen_ids:
-            seen_ids.add(job_id)
-            all_jobs.append(job)
+def ingest_adzuna_max_data_engineer() -> None:
+    validate_env()
+    session = build_session()
 
-    print("Total cumulé :", len(all_jobs))
+    page = 1
+    total_expected = None
+    all_jobs: List[Dict[str, Any]] = []
+    seen_ids = set()
 
-    if len(results) < RESULTS_PER_PAGE:
-        print("Dernière page détectée.")
-        break
+    while True:
+        if page > MAX_PAGES_SAFETY:
+            logger.warning("Arrêt sécurité : MAX_PAGES_SAFETY atteint (%s)", MAX_PAGES_SAFETY)
+            break
 
-    page += 1
-    time.sleep(SLEEP_SECONDS)
+        data = fetch_page(session, page)
+        results = data.get("results", [])
 
-# payload brut à stocker
-payload = {
-    "source": "adzuna",
-    "search_term": SEARCH_TERM,
-    "collected_at": datetime.utcnow().isoformat(),
-    "total_expected": total_expected,
-    "total_collected": len(all_jobs),
-    "jobs": all_jobs
-}
+        if total_expected is None:
+            total_expected = data.get("count")
+            logger.info("Total estimé par l'API : %s", total_expected)
 
-# 1) sauvegarde locale
-date_str = datetime.utcnow().strftime("%Y%m%d")
-local_filename = f"adzuna_raw_{date_str}.json"
+        logger.info("Page %s : %s résultats", page, len(results))
 
-with open(local_filename, "w", encoding="utf-8") as f:
-    json.dump(payload, f, ensure_ascii=False, indent=2)
+        if not results:
+            logger.info("Aucun résultat sur la page %s, arrêt.", page)
+            break
 
-print(f"Fichier local sauvegardé : {local_filename}")
+        new_jobs_count = 0
+        for job in results:
+            job_id = job.get("id")
+            if job_id and job_id not in seen_ids:
+                seen_ids.add(job_id)
+                all_jobs.append(job)
+                new_jobs_count += 1
 
-# 2) upload GCS
-client = storage.Client()
-bucket = client.bucket(BUCKET_NAME)
+        logger.info("Page %s : %s nouvelles offres ajoutées", page, new_jobs_count)
+        logger.info("Total cumulé : %s", len(all_jobs))
 
-gcs_filename = f"raw-adzuna/adzuna_raw_{date_str}.json"
-blob = bucket.blob(gcs_filename)
-blob.upload_from_filename(local_filename)
+        # Condition de fin 1 : dernière page probable
+        if len(results) < RESULTS_PER_PAGE:
+            logger.info("Dernière page détectée (moins de résultats que RESULTS_PER_PAGE).")
+            break
 
-print(f"Fichier uploadé dans gs://{BUCKET_NAME}/{gcs_filename}")
+        # Condition de fin 2 : on a atteint le total annoncé
+        if total_expected is not None and len(all_jobs) >= total_expected:
+            logger.info("Tous les résultats annoncés semblent récupérés.")
+            break
+
+        page += 1
+        time.sleep(SLEEP_SECONDS)
+
+    collected_at = datetime.now(timezone.utc).isoformat()
+    date_str = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+    timestamp_str = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
+
+    payload = {
+        "source": "adzuna",
+        "country": COUNTRY,
+        "search_term": SEARCH_TERM,
+        "collected_at": collected_at,
+        "results_per_page": RESULTS_PER_PAGE,
+        "pages_processed": page,
+        "max_pages_safety": MAX_PAGES_SAFETY,
+        "total_expected": total_expected,
+        "total_collected": len(all_jobs),
+        "jobs": all_jobs,
+    }
+
+    blob_name = f"{RAW_PREFIX}/date={date_str}/adzuna_data_engineer_{timestamp_str}.json"
+
+    upload_string_to_gcs(
+        bucket_name=GCS_BUCKET_NAME,
+        blob_name=blob_name,
+        content=json.dumps(payload, ensure_ascii=False, indent=2),
+        content_type="application/json",
+    )
+
+    logger.info("Ingestion terminée. %s offres stockées.", len(all_jobs))
+
+
+if __name__ == "__main__":
+    ingest_adzuna_max_data_engineer()
