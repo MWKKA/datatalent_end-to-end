@@ -1,13 +1,16 @@
-import requests
-import json
 import os
+import json
 import time
+from datetime import datetime
 from dotenv import load_dotenv
+import requests
+from google.cloud import storage
 
 load_dotenv()
 
 APP_ID = os.getenv("ADZUNA_APP_ID")
 APP_KEY = os.getenv("ADZUNA_APP_KEY")
+BUCKET_NAME = os.getenv("GCS_BUCKET_NAME")
 
 BASE_URL = "https://api.adzuna.com/v1/api/jobs/fr/search"
 SEARCH_TERM = "data engineer"
@@ -17,6 +20,9 @@ SLEEP_SECONDS = 3
 
 if not APP_ID or not APP_KEY:
     raise ValueError("ADZUNA_APP_ID ou ADZUNA_APP_KEY manquant dans le .env")
+
+if not BUCKET_NAME:
+    raise ValueError("GCS_BUCKET_NAME manquant dans le .env")
 
 all_jobs = []
 seen_ids = set()
@@ -71,8 +77,31 @@ while page <= MAX_PAGES_SAFETY:
     page += 1
     time.sleep(SLEEP_SECONDS)
 
-with open("adzuna_data_engineer.json", "w", encoding="utf-8") as f:
-    json.dump(all_jobs, f, ensure_ascii=False, indent=2)
+# payload brut à stocker
+payload = {
+    "source": "adzuna",
+    "search_term": SEARCH_TERM,
+    "collected_at": datetime.utcnow().isoformat(),
+    "total_expected": total_expected,
+    "total_collected": len(all_jobs),
+    "jobs": all_jobs
+}
 
-print(f"\nFichier sauvegardé : adzuna_data_engineer.json")
-print(f"Nombre total d'offres collectées : {len(all_jobs)}")
+# 1) sauvegarde locale
+date_str = datetime.utcnow().strftime("%Y%m%d")
+local_filename = f"adzuna_raw_{date_str}.json"
+
+with open(local_filename, "w", encoding="utf-8") as f:
+    json.dump(payload, f, ensure_ascii=False, indent=2)
+
+print(f"Fichier local sauvegardé : {local_filename}")
+
+# 2) upload GCS
+client = storage.Client()
+bucket = client.bucket(BUCKET_NAME)
+
+gcs_filename = f"raw-adzuna/adzuna_raw_{date_str}.json"
+blob = bucket.blob(gcs_filename)
+blob.upload_from_filename(local_filename)
+
+print(f"Fichier uploadé dans gs://{BUCKET_NAME}/{gcs_filename}")
