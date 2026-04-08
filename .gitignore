@@ -2,7 +2,7 @@
 __pycache__/
 *.py[codz]
 *$py.class
-
+data/
 # C extensions
 *.so
 
@@ -223,3 +223,6 @@ terraform/*.tfvars
 
 # Logs projet
 logs/
+
+# Données locales (raw, DB)
+data/

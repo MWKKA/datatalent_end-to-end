@@ -1,0 +1,13 @@
+-- staging geo
+-- objectif: uniformiser les types et les noms de colonnes geo.
+
+-- TODO: adapter selon moteur cible (SQLite local / BigQuery cloud)
+-- exemple d'intention:
+-- CREATE OR REPLACE VIEW stg_geo_communes AS
+-- SELECT
+--   code AS commune_code,
+--   nom AS commune_nom,
+--   code_departement AS departement_code,
+--   code_region AS region_code,
+--   population
+-- FROM raw_geo_communes;

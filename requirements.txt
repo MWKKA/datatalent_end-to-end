@@ -1,0 +1,7 @@
+google-cloud-bigquery>=3.40.1
+google-cloud-storage>=3.9.0
+loguru>=0.7.3
+pandas>=3.0.1
+pyarrow>=23.0.1
+python-dotenv>=1.2.2
+requests>=2.32.5
