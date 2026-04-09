@@ -20,6 +20,10 @@ SELECT 'city_std', COUNT(*), COUNTIF(city_std IS NULL), ROUND(100 * COUNTIF(city
 FROM {{ ref('mart_offres_clean') }}
 
 UNION ALL
+SELECT 'departement_std', COUNT(*), COUNTIF(departement_std IS NULL), ROUND(100 * COUNTIF(departement_std IS NULL) / COUNT(*), 2)
+FROM {{ ref('mart_offres_clean') }}
+
+UNION ALL
 SELECT 'salary_avg', COUNT(*), COUNTIF(salary_avg IS NULL), ROUND(100 * COUNTIF(salary_avg IS NULL) / COUNT(*), 2)
 FROM {{ ref('mart_offres_clean') }}
 

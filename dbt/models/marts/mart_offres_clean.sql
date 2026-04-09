@@ -44,6 +44,14 @@ WITH source AS (
     SAFE_CAST(siren AS INT64) AS siren,
     SAFE_CAST(siret AS INT64) AS siret,
     COALESCE(
+      CASE
+        WHEN REGEXP_CONTAINS(TRIM(COALESCE(lieu_libelle, '')), r'^\d{5}$')
+          THEN COALESCE(
+            NULLIF(TRIM(location_name), ''),
+            NULLIF(TRIM(lieu_commune), '')
+          )
+        ELSE NULLIF(TRIM(lieu_libelle), '')
+      END,
       NULLIF(TRIM(location_name), ''),
       NULLIF(TRIM(lieu_commune), '')
     ) AS location_raw,
@@ -89,11 +97,67 @@ WITH source AS (
     dl_update_date
   FROM {{ ref('int_offres_all_sources_current') }}
 ),
-location_std AS (
+location_with_cp AS (
   SELECT
     *,
+    COALESCE(
+      CASE
+        WHEN LENGTH(REGEXP_REPLACE(TRIM(COALESCE(postal_code, '')), r'[^0-9]', '')) = 5
+          THEN REGEXP_REPLACE(TRIM(COALESCE(postal_code, '')), r'[^0-9]', '')
+        ELSE NULL
+      END,
+      CASE
+        WHEN REGEXP_CONTAINS(TRIM(COALESCE(lieu_libelle, '')), r'^\d{5}$')
+          THEN REGEXP_REPLACE(TRIM(COALESCE(lieu_libelle, '')), r'[^0-9]', '')
+        ELSE NULL
+      END,
+      CASE
+        WHEN LENGTH(REGEXP_REPLACE(TRIM(COALESCE(lieu_libelle, '')), r'[^0-9]', '')) >= 5
+          THEN SUBSTR(REGEXP_REPLACE(TRIM(COALESCE(lieu_libelle, '')), r'[^0-9]', ''), 1, 5)
+        ELSE NULL
+      END,
+      CASE
+        WHEN REGEXP_CONTAINS(TRIM(COALESCE(location_name_raw, '')), r'^\d{5}$')
+          THEN REGEXP_REPLACE(TRIM(COALESCE(location_name_raw, '')), r'[^0-9]', '')
+        ELSE NULL
+      END,
+      CASE
+        WHEN REGEXP_CONTAINS(TRIM(COALESCE(lieu_commune, '')), r'^\d{5}$')
+          THEN REGEXP_REPLACE(TRIM(COALESCE(lieu_commune, '')), r'[^0-9]', '')
+        ELSE NULL
+      END,
+      CASE
+        WHEN REGEXP_CONTAINS(
+          CONCAT(
+            COALESCE(lieu_libelle, ''),
+            ' ',
+            COALESCE(lieu_commune, ''),
+            ' ',
+            COALESCE(location_name_raw, '')
+          ),
+          r'\d{5}'
+        )
+          THEN REGEXP_EXTRACT(
+            CONCAT(
+              COALESCE(lieu_libelle, ''),
+              ' ',
+              COALESCE(lieu_commune, ''),
+              ' ',
+              COALESCE(location_name_raw, '')
+            ),
+            r'(?:^|[^0-9])(\d{5})(?:[^0-9]|$)'
+          )
+        ELSE NULL
+      END
+    ) AS cp_norm
+  FROM source
+),
+location_inner AS (
+  SELECT
+    * EXCEPT (cp_norm),
     CASE
       WHEN LOWER(COALESCE(location_raw, '')) = 'france' THEN NULL
+      WHEN REGEXP_CONTAINS(COALESCE(location_raw, ''), r'^\d{5}$') THEN NULL
       WHEN REGEXP_CONTAINS(COALESCE(location_raw, ''), r'^\d{2,3}\s*-\s*') THEN
         TRIM(REGEXP_REPLACE(COALESCE(location_raw, ''), r'^\d{2,3}\s*-\s*', ''))
       WHEN REGEXP_CONTAINS(COALESCE(location_raw, ''), r',') THEN
@@ -105,8 +169,37 @@ location_std AS (
       WHEN REGEXP_CONTAINS(COALESCE(location_raw, ''), r',') THEN
         TRIM(SPLIT(COALESCE(location_raw, ''), ',')[SAFE_OFFSET(1)])
       ELSE NULL
-    END AS location_secondary_std
-  FROM source
+    END AS location_secondary_std,
+    CASE
+      WHEN cp_norm IS NOT NULL THEN
+        CASE
+          WHEN cp_norm BETWEEN '97000' AND '99999' THEN SUBSTR(cp_norm, 1, 3)
+          WHEN cp_norm BETWEEN '20000' AND '20199' THEN '2A'
+          WHEN cp_norm BETWEEN '20200' AND '20689' THEN '2B'
+          ELSE SUBSTR(cp_norm, 1, 2)
+        END
+      WHEN REGEXP_CONTAINS(COALESCE(location_raw, ''), r'^\d{2,3}\s*-\s*') THEN
+        REGEXP_EXTRACT(COALESCE(location_raw, ''), r'^(\d{2,3})\s*-\s*')
+      ELSE NULL
+    END AS departement_from_cp
+  FROM location_with_cp
+),
+location_std AS (
+  SELECT
+    * EXCEPT (departement_from_cp),
+    COALESCE(
+      departement_from_cp,
+      {{ departement_depuis_texte('location_secondary_std') }},
+      {{ departement_depuis_texte('city_std') }},
+      {{ departement_depuis_texte('lieu_commune') }},
+      {{ departement_depuis_texte('location_name_raw') }},
+      {{ departement_depuis_texte('lieu_libelle') }},
+      {{ departement_depuis_ville('city_std') }},
+      {{ departement_depuis_ville('lieu_commune') }},
+      {{ departement_depuis_ville('location_name_raw') }},
+      {{ departement_depuis_ville('lieu_libelle') }}
+    ) AS departement_std
+  FROM location_inner
 ),
 enriched AS (
   SELECT
@@ -161,8 +254,36 @@ enriched AS (
       ELSE '65k+'
     END AS salary_bucket,
     CASE
-      WHEN LOWER(COALESCE(type_contrat_libelle, type_contrat, nature_contrat, '')) LIKE '%cdi%' THEN 'CDI'
-      WHEN LOWER(COALESCE(type_contrat_libelle, type_contrat, nature_contrat, '')) LIKE '%cdd%' THEN 'CDD'
+      WHEN REGEXP_CONTAINS(
+        LOWER(CONCAT(
+          COALESCE(type_contrat_libelle, ''), ' ',
+          COALESCE(type_contrat, ''), ' ',
+          COALESCE(nature_contrat, ''), ' ',
+          COALESCE(duree_travail_libelle, ''), ' ',
+          COALESCE(salaire_libelle, ''), ' ',
+          SUBSTR(COALESCE(ft_description, ''), 1, 4000)
+        )),
+        r'\bcdi\b|dur[ée]e\s+ind[ée]termin[ée]e|contrat\s+[àa]\s+dur[ée]e\s+ind[ée]termin[ée]e'
+      )
+        OR LOWER(TRIM(COALESCE(type_contrat, ''))) IN ('e1', 'cdi')
+        OR LOWER(TRIM(COALESCE(type_contrat_libelle, ''))) LIKE '%durée indéterminée%'
+        OR LOWER(TRIM(COALESCE(type_contrat_libelle, ''))) LIKE '%duree indeterminee%'
+      THEN 'CDI'
+      WHEN REGEXP_CONTAINS(
+        LOWER(CONCAT(
+          COALESCE(type_contrat_libelle, ''), ' ',
+          COALESCE(type_contrat, ''), ' ',
+          COALESCE(nature_contrat, ''), ' ',
+          COALESCE(duree_travail_libelle, ''), ' ',
+          COALESCE(salaire_libelle, ''), ' ',
+          SUBSTR(COALESCE(ft_description, ''), 1, 4000)
+        )),
+        r'\bcdd\b|dur[ée]e\s+d[ée]termin[ée]e|contrat\s+[àa]\s+dur[ée]e\s+d[ée]termin[ée]e'
+      )
+        OR LOWER(TRIM(COALESCE(type_contrat, ''))) IN ('e2', 'cdd')
+        OR LOWER(TRIM(COALESCE(type_contrat_libelle, ''))) LIKE '%durée déterminée%'
+        OR LOWER(TRIM(COALESCE(type_contrat_libelle, ''))) LIKE '%duree determinee%'
+      THEN 'CDD'
       WHEN LOWER(COALESCE(type_contrat_libelle, type_contrat, nature_contrat, '')) LIKE '%altern%' THEN 'Alternance'
       WHEN LOWER(COALESCE(type_contrat_libelle, type_contrat, nature_contrat, '')) LIKE '%stage%' THEN 'Stage'
       WHEN COALESCE(type_contrat_libelle, type_contrat, nature_contrat) IS NULL THEN 'Non renseigné'
@@ -210,9 +331,19 @@ enriched AS (
     CASE WHEN job_title IS NOT NULL THEN TRUE ELSE FALSE END AS has_job_title,
     CASE WHEN company_name_display IS NOT NULL THEN TRUE ELSE FALSE END AS has_company,
     CASE WHEN city_std IS NOT NULL THEN TRUE ELSE FALSE END AS has_city,
+    CASE WHEN departement_std IS NOT NULL THEN TRUE ELSE FALSE END AS has_departement,
     CASE WHEN latitude IS NOT NULL AND longitude IS NOT NULL THEN TRUE ELSE FALSE END AS has_coordinates,
     CASE WHEN salary_avg_min IS NOT NULL OR salary_avg_max IS NOT NULL THEN TRUE ELSE FALSE END AS has_salary,
-    CASE WHEN sirene_matched = 1 THEN TRUE ELSE FALSE END AS has_sirene_match
+    CASE WHEN sirene_matched = 1 THEN TRUE ELSE FALSE END AS has_sirene_match,
+    {{ departement_libelle_case('departement_std') }} AS departement_libelle,
+    CASE
+      WHEN departement_std IS NULL THEN NULL
+      ELSE CONCAT(
+        departement_std,
+        ' - ',
+        COALESCE({{ departement_libelle_case('departement_std') }}, 'Inconnu')
+      )
+    END AS departement_label
   FROM location_std
 )
 SELECT
@@ -243,6 +374,9 @@ SELECT
   latitude,
   longitude,
   city_std,
+  departement_std,
+  departement_libelle,
+  departement_label,
   location_secondary_std,
   type_contrat,
   type_contrat_libelle,
@@ -275,6 +409,7 @@ SELECT
   has_job_title,
   has_company,
   has_city,
+  has_departement,
   has_coordinates,
   has_salary,
   has_sirene_match,

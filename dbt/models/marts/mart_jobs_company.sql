@@ -5,7 +5,7 @@ SELECT
   ANY_VALUE(company_name_display) AS company_name_display,
   ANY_VALUE(siren) AS siren,
   COUNT(*) AS nb_offres,
-  COUNT(DISTINCT city_std) AS nb_villes,
+  COUNT(DISTINCT departement_std) AS nb_departements,
   COUNTIF(has_salary) AS nb_offres_avec_salaire,
   ROUND(AVG(salary_avg), 2) AS salaire_moyen,
   APPROX_QUANTILES(salary_avg, 100)[OFFSET(50)] AS salaire_median,
