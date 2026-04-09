@@ -1,37 +1,37 @@
 # dbt BigQuery - DataTalent
 
-Projet dbt base sur le flux valide du groupe:
-- `raw -> staging -> intermediate -> marts`
-- SCD2 pilote par `delete_update` (snapshot dbt)
-- sans dependance `adzuna_company_metrics`
+Aligné sur le schéma équipe :
 
-## 1) Prerequis
+- **Raw** : non géré par dbt (tables déjà en place dans BigQuery).
+- **Staging** : consommé via `sources` (`offres_enriched_clean`, `offres_staging`, `adzuna_jobs_clean`).
+- **Intermediate** : `int_adzuna_company_metrics`, `int_offres_all_sources_source`, snapshot SCD2, vue `int_offres_all_sources_current`.
+- **Marts** : `mart_offres_clean` et tables dérivées (KPI, geo, etc.).
 
-- Installer dbt BigQuery:
-  - `pip install dbt-bigquery`
-- Authentification GCP active (ADC ou service account)
+SCD2 (snapshot dbt) : colonne de versionnement **`update_date`**. Comme `os.date_actualisation` est souvent NULL quand la jointure `offres_staging` ne matche pas, `update_date` est calculée par `COALESCE(os.date_actualisation, oe.last_seen_at, oe.enriched_at)` pour que le snapshot garde une ligne par offre (sinon le mart se vide).
 
-## 2) Profil dbt
+## Prérequis
 
-Copier `profiles.yml.example` vers votre dossier profils dbt:
+- `uv` + dépendances du projet (`uv pip install dbt-bigquery` dans le venv du repo si besoin).
+- Authentification GCP (ADC).
 
-- Linux/WSL: `~/.dbt/profiles.yml`
+## Profil
 
-## 3) Run ordre recommande
+Copier `profiles.yml.example` vers `~/.dbt/profiles.yml`.
 
-Depuis le dossier `dbt/`:
+## Ordre d’exécution (depuis `dbt/`)
 
-- `dbt debug`
-- `dbt deps` (optionnel si packages plus tard)
-- `dbt run --select stg_offres_enriched_clean int_offres_all_sources_source`
-- `dbt snapshot --select snp_offres_all_sources_scd2`
-- `dbt run --select int_offres_all_sources_current`
-- `dbt run --select marts`
-- `dbt test`
+```bash
+uv run dbt debug
+uv run dbt run --select int_adzuna_company_metrics int_offres_all_sources_source
+uv run dbt snapshot --select snp_offres_all_sources_scd2
+uv run dbt run --select int_offres_all_sources_current
+uv run dbt run --select marts
+uv run dbt test
+```
 
-## 4) Modeles principaux
+## Fichiers clés
 
-- `models/staging/stg_offres_enriched_clean.sql`
+- `models/intermediate/int_adzuna_company_metrics.sql`
 - `models/intermediate/int_offres_all_sources_source.sql`
 - `snapshots/snp_offres_all_sources_scd2.sql`
 - `models/intermediate/int_offres_all_sources_current.sql`

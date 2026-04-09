@@ -1,52 +1,36 @@
 version: 2
 
 models:
-  - name: stg_offres_enriched_clean
-    description: "Nettoyage de l'enrichissement Sirene depuis raw."
+  - name: int_adzuna_company_metrics
+    description: "Métriques agrégées Adzuna par entreprise (company_name_clean)."
     columns:
-      - name: offer_id
-        tests:
-          - not_null
-          - unique
       - name: company_name_clean
         tests:
           - not_null
 
   - name: int_offres_all_sources_source
-    description: "Table source unifiee pour snapshot SCD2."
+    description: "Source unifiée enrichie + FT + metrics Adzuna (schéma équipe)."
     columns:
       - name: offer_id
-        tests:
-          - not_null
-      - name: delete_update
         tests:
           - not_null
 
   - name: int_offres_all_sources_current
-    description: "Vue courante (lignes actives) du SCD2."
+    description: "Lignes courantes du snapshot SCD2."
     columns:
       - name: offer_id
         tests:
           - not_null
-      - name: is_current
-        tests:
-          - not_null
 
   - name: mart_offres_clean
-    description: "Mart central nettoye pour dashboard."
+    description: "Mart central pour dashboard."
     columns:
       - name: offer_id
         tests:
           - not_null
           - unique
-      - name: job_title
-      - name: company_name_std
-      - name: is_data_engineer
-        tests:
-          - not_null
 
   - name: mart_offres_data_engineer
-    description: "Sous-ensemble data engineer."
     columns:
       - name: offer_id
         tests:

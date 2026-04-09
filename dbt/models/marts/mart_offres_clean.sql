@@ -3,7 +3,10 @@
 WITH source AS (
   SELECT
     offer_id,
-    COALESCE(NULLIF(TRIM(title), ''), NULLIF(TRIM(intitule), '')) AS job_title,
+    COALESCE(
+      NULLIF(TRIM(title), ''),
+      NULLIF(TRIM(intitule), '')
+    ) AS job_title,
     NULLIF(TRIM(title), '') AS title_raw,
     NULLIF(TRIM(intitule), '') AS intitule_raw,
     NULLIF(TRIM(company_name), '') AS company_name_raw,
@@ -19,16 +22,18 @@ WITH source AS (
     ) AS company_name_display,
     COALESCE(
       NULLIF(TRIM(company_name_clean), ''),
-      LOWER(REGEXP_REPLACE(
-        COALESCE(
-          NULLIF(TRIM(company_name), ''),
-          NULLIF(TRIM(entreprise_nom), ''),
-          NULLIF(TRIM(sirene_name), ''),
-          NULLIF(TRIM(adzuna_company_name), '')
-        ),
-        r'[^a-zA-Z0-9]',
-        ''
-      ))
+      LOWER(
+        REGEXP_REPLACE(
+          COALESCE(
+            NULLIF(TRIM(company_name), ''),
+            NULLIF(TRIM(entreprise_nom), ''),
+            NULLIF(TRIM(sirene_name), ''),
+            NULLIF(TRIM(adzuna_company_name), '')
+          ),
+          r'[^a-zA-Z0-9]',
+          ''
+        )
+      )
     ) AS company_name_std,
     SAFE_CAST(sirene_matched AS INT64) AS sirene_matched,
     NULLIF(TRIM(match_method), '') AS match_method,
@@ -38,7 +43,10 @@ WITH source AS (
     NULLIF(TRIM(code_naf_sirene), '') AS code_naf_sirene,
     SAFE_CAST(siren AS INT64) AS siren,
     SAFE_CAST(siret AS INT64) AS siret,
-    COALESCE(NULLIF(TRIM(location_name), ''), NULLIF(TRIM(lieu_commune), '')) AS location_raw,
+    COALESCE(
+      NULLIF(TRIM(location_name), ''),
+      NULLIF(TRIM(lieu_commune), '')
+    ) AS location_raw,
     NULLIF(TRIM(location_name), '') AS location_name_raw,
     NULLIF(TRIM(lieu_libelle), '') AS lieu_libelle,
     NULLIF(TRIM(lieu_commune), '') AS lieu_commune,
@@ -76,7 +84,9 @@ WITH source AS (
     update_date AS date_actualisation,
     adzuna_latest_created_at,
     valid_from,
-    valid_to
+    valid_to,
+    dl_insert_date,
+    dl_update_date
   FROM {{ ref('int_offres_all_sources_current') }}
 ),
 location_std AS (
@@ -84,10 +94,18 @@ location_std AS (
     *,
     CASE
       WHEN LOWER(COALESCE(location_raw, '')) = 'france' THEN NULL
-      WHEN REGEXP_CONTAINS(COALESCE(location_raw, ''), r'^\d{2,3}\s*-\s*') THEN TRIM(REGEXP_REPLACE(COALESCE(location_raw, ''), r'^\d{2,3}\s*-\s*', ''))
-      WHEN REGEXP_CONTAINS(COALESCE(location_raw, ''), r',') THEN TRIM(SPLIT(COALESCE(location_raw, ''), ',')[OFFSET(0)])
+      WHEN REGEXP_CONTAINS(COALESCE(location_raw, ''), r'^\d{2,3}\s*-\s*') THEN
+        TRIM(REGEXP_REPLACE(COALESCE(location_raw, ''), r'^\d{2,3}\s*-\s*', ''))
+      WHEN REGEXP_CONTAINS(COALESCE(location_raw, ''), r',') THEN
+        TRIM(SPLIT(COALESCE(location_raw, ''), ',')[OFFSET(0)])
       ELSE TRIM(location_raw)
-    END AS city_std
+    END AS city_std,
+    CASE
+      WHEN LOWER(COALESCE(location_raw, '')) = 'france' THEN 'France'
+      WHEN REGEXP_CONTAINS(COALESCE(location_raw, ''), r',') THEN
+        TRIM(SPLIT(COALESCE(location_raw, ''), ',')[SAFE_OFFSET(1)])
+      ELSE NULL
+    END AS location_secondary_std
   FROM source
 ),
 enriched AS (
@@ -104,19 +122,59 @@ enriched AS (
       ELSE NULL
     END AS salary_range,
     CASE
-      WHEN COALESCE(type_contrat_libelle, type_contrat, nature_contrat) IS NULL THEN 'Non renseigne'
+      WHEN (
+        CASE
+          WHEN salary_avg_min IS NOT NULL AND salary_avg_max IS NOT NULL THEN (salary_avg_min + salary_avg_max) / 2
+          WHEN salary_avg_min IS NOT NULL THEN salary_avg_min
+          WHEN salary_avg_max IS NOT NULL THEN salary_avg_max
+          ELSE NULL
+        END
+      ) IS NULL THEN 'Non renseigné'
+      WHEN (
+        CASE
+          WHEN salary_avg_min IS NOT NULL AND salary_avg_max IS NOT NULL THEN (salary_avg_min + salary_avg_max) / 2
+          WHEN salary_avg_min IS NOT NULL THEN salary_avg_min
+          WHEN salary_avg_max IS NOT NULL THEN salary_avg_max
+        END
+      ) < 35000 THEN '<35k'
+      WHEN (
+        CASE
+          WHEN salary_avg_min IS NOT NULL AND salary_avg_max IS NOT NULL THEN (salary_avg_min + salary_avg_max) / 2
+          WHEN salary_avg_min IS NOT NULL THEN salary_avg_min
+          WHEN salary_avg_max IS NOT NULL THEN salary_avg_max
+        END
+      ) < 45000 THEN '35k-45k'
+      WHEN (
+        CASE
+          WHEN salary_avg_min IS NOT NULL AND salary_avg_max IS NOT NULL THEN (salary_avg_min + salary_avg_max) / 2
+          WHEN salary_avg_min IS NOT NULL THEN salary_avg_min
+          WHEN salary_avg_max IS NOT NULL THEN salary_avg_max
+        END
+      ) < 55000 THEN '45k-55k'
+      WHEN (
+        CASE
+          WHEN salary_avg_min IS NOT NULL AND salary_avg_max IS NOT NULL THEN (salary_avg_min + salary_avg_max) / 2
+          WHEN salary_avg_min IS NOT NULL THEN salary_avg_min
+          WHEN salary_avg_max IS NOT NULL THEN salary_avg_max
+        END
+      ) < 65000 THEN '55k-65k'
+      ELSE '65k+'
+    END AS salary_bucket,
+    CASE
       WHEN LOWER(COALESCE(type_contrat_libelle, type_contrat, nature_contrat, '')) LIKE '%cdi%' THEN 'CDI'
       WHEN LOWER(COALESCE(type_contrat_libelle, type_contrat, nature_contrat, '')) LIKE '%cdd%' THEN 'CDD'
       WHEN LOWER(COALESCE(type_contrat_libelle, type_contrat, nature_contrat, '')) LIKE '%altern%' THEN 'Alternance'
       WHEN LOWER(COALESCE(type_contrat_libelle, type_contrat, nature_contrat, '')) LIKE '%stage%' THEN 'Stage'
+      WHEN COALESCE(type_contrat_libelle, type_contrat, nature_contrat) IS NULL THEN 'Non renseigné'
       ELSE COALESCE(type_contrat_libelle, type_contrat, nature_contrat)
     END AS contract_group,
     CASE
-      WHEN experience_libelle IS NULL THEN 'Non renseigne'
       WHEN LOWER(COALESCE(experience_libelle, '')) LIKE '%junior%' THEN 'Junior'
       WHEN LOWER(COALESCE(experience_libelle, '')) LIKE '%senior%' THEN 'Senior'
-      WHEN LOWER(COALESCE(experience_libelle, '')) LIKE '%debut%' THEN 'Debutant'
-      WHEN LOWER(COALESCE(experience_libelle, '')) LIKE '%confirm%' THEN 'Confirme'
+      WHEN LOWER(COALESCE(experience_libelle, '')) LIKE '%début%' THEN 'Débutant'
+      WHEN LOWER(COALESCE(experience_libelle, '')) LIKE '%debut%' THEN 'Débutant'
+      WHEN LOWER(COALESCE(experience_libelle, '')) LIKE '%confirm%' THEN 'Confirmé'
+      WHEN experience_libelle IS NULL THEN 'Non renseigné'
       ELSE experience_libelle
     END AS experience_group,
     CASE
@@ -124,20 +182,29 @@ enriched AS (
       WHEN REGEXP_CONTAINS(LOWER(job_title), r'\bdata engineer\b') THEN 'Data Engineer'
       WHEN REGEXP_CONTAINS(LOWER(job_title), r'ing[eé]nieur data') THEN 'Data Engineer'
       WHEN REGEXP_CONTAINS(LOWER(job_title), r'\bdata analyst\b') THEN 'Data Analyst'
+      WHEN REGEXP_CONTAINS(LOWER(job_title), r'analyste data') THEN 'Data Analyst'
       WHEN REGEXP_CONTAINS(LOWER(job_title), r'\bdata scientist\b') THEN 'Data Scientist'
       WHEN REGEXP_CONTAINS(LOWER(job_title), r'\bml engineer\b|\bmachine learning engineer\b') THEN 'ML Engineer'
-      WHEN REGEXP_CONTAINS(LOWER(job_title), r'\bbi\b|\bbusiness intelligence\b') THEN 'BI / Analytics'
-      WHEN REGEXP_CONTAINS(LOWER(job_title), r'\bdata\b') THEN 'Autre metier data'
+      WHEN REGEXP_CONTAINS(LOWER(job_title), r'\bbi\b|\bbusiness intelligence\b|\banalyst\b') THEN 'BI / Analytics'
+      WHEN REGEXP_CONTAINS(LOWER(job_title), r'\bdata\b') THEN 'Autre métier data'
       ELSE 'Autre'
     END AS job_family,
     CASE
       WHEN job_title IS NULL THEN FALSE
-      WHEN REGEXP_CONTAINS(LOWER(job_title), r'\bdata engineer\b|ing[eé]nieur data|\bdatabricks\b|\betl\b|big data|cloud data') THEN TRUE
+      WHEN REGEXP_CONTAINS(LOWER(job_title), r'\bdata engineer\b') THEN TRUE
+      WHEN REGEXP_CONTAINS(LOWER(job_title), r'ing[eé]nieur data') THEN TRUE
+      WHEN REGEXP_CONTAINS(LOWER(job_title), r'\bdatabricks\b') THEN TRUE
+      WHEN REGEXP_CONTAINS(LOWER(job_title), r'\betl\b') THEN TRUE
+      WHEN REGEXP_CONTAINS(LOWER(job_title), r'big data') THEN TRUE
+      WHEN REGEXP_CONTAINS(LOWER(job_title), r'cloud data') THEN TRUE
       ELSE FALSE
     END AS is_data_engineer,
     CASE
       WHEN alternance_source = TRUE THEN TRUE
-      WHEN REGEXP_CONTAINS(LOWER(COALESCE(job_title, '')), r'\balternance\b|\bapprentissage\b|\bapprenti\b') THEN TRUE
+      WHEN REGEXP_CONTAINS(LOWER(COALESCE(job_title, '')), r'\balternance\b|\bapprentissage\b|\bapprenti\b|\bcontrat de professionnalisation\b') THEN TRUE
+      WHEN REGEXP_CONTAINS(LOWER(COALESCE(type_contrat_libelle, '')), r'\balternance\b|\bapprentissage\b|\bapprenti\b|\bcontrat de professionnalisation\b') THEN TRUE
+      WHEN REGEXP_CONTAINS(LOWER(COALESCE(type_contrat, '')), r'\balternance\b|\bapprentissage\b|\bapprenti\b|\bcontrat de professionnalisation\b') THEN TRUE
+      WHEN REGEXP_CONTAINS(LOWER(COALESCE(nature_contrat, '')), r'\balternance\b|\bapprentissage\b|\bapprenti\b|\bcontrat de professionnalisation\b') THEN TRUE
       ELSE FALSE
     END AS alternance,
     CASE WHEN job_title IS NOT NULL THEN TRUE ELSE FALSE END AS has_job_title,
@@ -148,4 +215,76 @@ enriched AS (
     CASE WHEN sirene_matched = 1 THEN TRUE ELSE FALSE END AS has_sirene_match
   FROM location_std
 )
-SELECT * FROM enriched
+SELECT
+  offer_id,
+  job_title,
+  title_raw,
+  intitule_raw,
+  company_name_raw,
+  company_name_clean,
+  entreprise_nom,
+  sirene_name,
+  adzuna_company_name,
+  company_name_display,
+  company_name_std,
+  sirene_matched,
+  match_method,
+  match_score,
+  naf_match,
+  code_naf_offre,
+  code_naf_sirene,
+  siren,
+  siret,
+  location_raw,
+  location_name_raw,
+  lieu_libelle,
+  lieu_commune,
+  postal_code,
+  latitude,
+  longitude,
+  city_std,
+  location_secondary_std,
+  type_contrat,
+  type_contrat_libelle,
+  nature_contrat,
+  alternance,
+  experience_exige,
+  experience_libelle,
+  duree_travail_libelle,
+  nb_positions,
+  salaire_libelle,
+  salary_avg_min,
+  salary_avg_max,
+  salary_min_raw,
+  salary_max_raw,
+  salary_avg,
+  salary_range,
+  salary_bucket,
+  rome_code,
+  rome_libelle,
+  appellation_libelle,
+  code_naf_std,
+  secteur_activite,
+  secteur_activite_libelle,
+  ft_description,
+  entreprise_description,
+  contract_group,
+  experience_group,
+  job_family,
+  is_data_engineer,
+  has_job_title,
+  has_company,
+  has_city,
+  has_coordinates,
+  has_salary,
+  has_sirene_match,
+  enriched_at,
+  last_seen_at,
+  date_creation,
+  date_actualisation,
+  adzuna_latest_created_at,
+  valid_from,
+  valid_to,
+  dl_insert_date,
+  dl_update_date
+FROM enriched

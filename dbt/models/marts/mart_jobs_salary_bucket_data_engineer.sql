@@ -4,7 +4,7 @@ SELECT
   salary_bucket,
   COUNT(*) AS nb_offres,
   ROUND(100 * COUNT(*) / SUM(COUNT(*)) OVER (), 2) AS pct_offres
-FROM {{ ref('mart_offres_clean') }}
+FROM {{ ref('mart_offres_data_engineer') }}
 GROUP BY salary_bucket
 ORDER BY
   CASE salary_bucket

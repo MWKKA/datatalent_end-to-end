@@ -2,17 +2,14 @@
 
 SELECT
   city_std AS ville,
-  ANY_VALUE(postal_code) AS code_postal,
-  ANY_VALUE(latitude) AS latitude,
-  ANY_VALUE(longitude) AS longitude,
   COUNT(*) AS nb_offres,
-  COUNT(DISTINCT company_name_std) AS nb_entreprises,
   COUNTIF(has_salary) AS nb_offres_avec_salaire,
   ROUND(AVG(salary_avg), 2) AS salaire_moyen,
   APPROX_QUANTILES(salary_avg, 100)[OFFSET(50)] AS salaire_median,
   MIN(salary_avg) AS salaire_min,
   MAX(salary_avg) AS salaire_max
-FROM {{ ref('mart_offres_clean') }}
+FROM {{ ref('mart_offres_data_engineer') }}
 WHERE city_std IS NOT NULL
 GROUP BY city_std
-ORDER BY nb_offres DESC
+HAVING COUNT(*) >= 2
+ORDER BY salaire_moyen DESC

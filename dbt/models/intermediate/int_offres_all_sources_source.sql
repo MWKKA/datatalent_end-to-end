@@ -1,22 +1,12 @@
 {{ config(materialized='table') }}
 
-{% set offres_staging_relation = source('staging', 'offres_staging') %}
-{% set offres_staging_columns = adapter.get_columns_in_relation(offres_staging_relation) %}
-{% set offres_staging_column_names = offres_staging_columns | map(attribute='name') | map('lower') | list %}
-{% set has_delete_update = 'delete_update' in offres_staging_column_names %}
-
 SELECT
   oe.*,
   os.id_offre,
   os.intitule,
   os.description AS ft_description,
   os.date_creation,
-  os.date_actualisation AS update_date,
-  {% if has_delete_update %}
-  COALESCE(os.delete_update, os.date_actualisation) AS delete_update,
-  {% else %}
-  os.date_actualisation AS delete_update,
-  {% endif %}
+  COALESCE(os.date_actualisation, oe.last_seen_at, oe.enriched_at) AS update_date,
   os.lieu_libelle,
   os.lieu_latitude,
   os.lieu_longitude,
@@ -39,13 +29,15 @@ SELECT
   os.code_naf,
   os.secteur_activite,
   os.secteur_activite_libelle,
-  CAST(NULL AS STRING) AS adzuna_company_name,
-  CAST(NULL AS INT64) AS adzuna_job_count,
-  CAST(NULL AS FLOAT64) AS adzuna_avg_salary_min,
-  CAST(NULL AS FLOAT64) AS adzuna_avg_salary_max,
-  CAST(NULL AS FLOAT64) AS adzuna_min_salary_min,
-  CAST(NULL AS FLOAT64) AS adzuna_max_salary_max,
-  CAST(NULL AS TIMESTAMP) AS adzuna_latest_created_at
-FROM {{ ref('stg_offres_enriched_clean') }} oe
+  ac.company_name AS adzuna_company_name,
+  ac.adzuna_job_count,
+  ac.adzuna_avg_salary_min,
+  ac.adzuna_avg_salary_max,
+  ac.adzuna_min_salary_min,
+  ac.adzuna_max_salary_max,
+  ac.adzuna_latest_created_at
+FROM {{ source('staging', 'offres_enriched_clean') }} oe
 LEFT JOIN {{ source('staging', 'offres_staging') }} os
   ON oe.offer_id = os.id_offre
+LEFT JOIN {{ ref('int_adzuna_company_metrics') }} ac
+  ON oe.company_name_clean = ac.company_name_clean

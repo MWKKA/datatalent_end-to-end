@@ -5,7 +5,7 @@
     target_schema='intermediate',
     unique_key='offer_id',
     strategy='timestamp',
-    updated_at='delete_update',
+    updated_at='update_date',
     invalidate_hard_deletes=True
   )
 }}
