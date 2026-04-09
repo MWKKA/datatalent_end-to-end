@@ -1,0 +1,746 @@
+{
+  "version": 4,
+  "terraform_version": "1.14.8",
+  "serial": 28,
+  "lineage": "0afa8666-6d36-86fd-fabf-2a202fd98c5c",
+  "outputs": {
+    "cloud_run_job_name": {
+      "value": "datatalent-ingestion",
+      "type": "string"
+    },
+    "pipeline_service_account": {
+      "value": "datatalent-pipeline@datatalent-simplon.iam.gserviceaccount.com",
+      "type": "string"
+    },
+    "raw_bucket_name": {
+      "value": "datatalent-raw-datatalent-simplon",
+      "type": "string"
+    },
+    "scheduler_job_name": {
+      "value": "datatalent-daily-ingestion",
+      "type": "string"
+    }
+  },
+  "resources": [
+    {
+      "mode": "managed",
+      "type": "google_project_service",
+      "name": "required",
+      "provider": "provider[\"registry.terraform.io/hashicorp/google\"]",
+      "instances": [
+        {
+          "index_key": "artifactregistry.googleapis.com",
+          "schema_version": 0,
+          "attributes": {
+            "disable_dependent_services": null,
+            "disable_on_destroy": false,
+            "id": "datatalent-simplon/artifactregistry.googleapis.com",
+            "project": "datatalent-simplon",
+            "service": "artifactregistry.googleapis.com",
+            "timeouts": null
+          },
+          "sensitive_attributes": [],
+          "identity_schema_version": 0,
+          "private": "eyJlMmJmYjczMC1lY2FhLTExZTYtOGY4OC0zNDM2M2JjN2M0YzAiOnsiY3JlYXRlIjoxMjAwMDAwMDAwMDAwLCJkZWxldGUiOjEyMDAwMDAwMDAwMDAsInJlYWQiOjYwMDAwMDAwMDAwMCwidXBkYXRlIjoxMjAwMDAwMDAwMDAwfX0="
+        },
+        {
+          "index_key": "bigquery.googleapis.com",
+          "schema_version": 0,
+          "attributes": {
+            "disable_dependent_services": null,
+            "disable_on_destroy": false,
+            "id": "datatalent-simplon/bigquery.googleapis.com",
+            "project": "datatalent-simplon",
+            "service": "bigquery.googleapis.com",
+            "timeouts": null
+          },
+          "sensitive_attributes": [],
+          "identity_schema_version": 0,
+          "private": "eyJlMmJmYjczMC1lY2FhLTExZTYtOGY4OC0zNDM2M2JjN2M0YzAiOnsiY3JlYXRlIjoxMjAwMDAwMDAwMDAwLCJkZWxldGUiOjEyMDAwMDAwMDAwMDAsInJlYWQiOjYwMDAwMDAwMDAwMCwidXBkYXRlIjoxMjAwMDAwMDAwMDAwfX0="
+        },
+        {
+          "index_key": "cloudscheduler.googleapis.com",
+          "schema_version": 0,
+          "attributes": {
+            "disable_dependent_services": null,
+            "disable_on_destroy": false,
+            "id": "datatalent-simplon/cloudscheduler.googleapis.com",
+            "project": "datatalent-simplon",
+            "service": "cloudscheduler.googleapis.com",
+            "timeouts": null
+          },
+          "sensitive_attributes": [],
+          "identity_schema_version": 0,
+          "private": "eyJlMmJmYjczMC1lY2FhLTExZTYtOGY4OC0zNDM2M2JjN2M0YzAiOnsiY3JlYXRlIjoxMjAwMDAwMDAwMDAwLCJkZWxldGUiOjEyMDAwMDAwMDAwMDAsInJlYWQiOjYwMDAwMDAwMDAwMCwidXBkYXRlIjoxMjAwMDAwMDAwMDAwfX0="
+        },
+        {
+          "index_key": "iam.googleapis.com",
+          "schema_version": 0,
+          "attributes": {
+            "disable_dependent_services": null,
+            "disable_on_destroy": false,
+            "id": "datatalent-simplon/iam.googleapis.com",
+            "project": "datatalent-simplon",
+            "service": "iam.googleapis.com",
+            "timeouts": null
+          },
+          "sensitive_attributes": [],
+          "identity_schema_version": 0,
+          "private": "eyJlMmJmYjczMC1lY2FhLTExZTYtOGY4OC0zNDM2M2JjN2M0YzAiOnsiY3JlYXRlIjoxMjAwMDAwMDAwMDAwLCJkZWxldGUiOjEyMDAwMDAwMDAwMDAsInJlYWQiOjYwMDAwMDAwMDAwMCwidXBkYXRlIjoxMjAwMDAwMDAwMDAwfX0="
+        },
+        {
+          "index_key": "run.googleapis.com",
+          "schema_version": 0,
+          "attributes": {
+            "disable_dependent_services": null,
+            "disable_on_destroy": false,
+            "id": "datatalent-simplon/run.googleapis.com",
+            "project": "datatalent-simplon",
+            "service": "run.googleapis.com",
+            "timeouts": null
+          },
+          "sensitive_attributes": [],
+          "identity_schema_version": 0,
+          "private": "eyJlMmJmYjczMC1lY2FhLTExZTYtOGY4OC0zNDM2M2JjN2M0YzAiOnsiY3JlYXRlIjoxMjAwMDAwMDAwMDAwLCJkZWxldGUiOjEyMDAwMDAwMDAwMDAsInJlYWQiOjYwMDAwMDAwMDAwMCwidXBkYXRlIjoxMjAwMDAwMDAwMDAwfX0="
+        },
+        {
+          "index_key": "secretmanager.googleapis.com",
+          "schema_version": 0,
+          "attributes": {
+            "disable_dependent_services": null,
+            "disable_on_destroy": false,
+            "id": "datatalent-simplon/secretmanager.googleapis.com",
+            "project": "datatalent-simplon",
+            "service": "secretmanager.googleapis.com",
+            "timeouts": null
+          },
+          "sensitive_attributes": [],
+          "identity_schema_version": 0,
+          "private": "eyJlMmJmYjczMC1lY2FhLTExZTYtOGY4OC0zNDM2M2JjN2M0YzAiOnsiY3JlYXRlIjoxMjAwMDAwMDAwMDAwLCJkZWxldGUiOjEyMDAwMDAwMDAwMDAsInJlYWQiOjYwMDAwMDAwMDAwMCwidXBkYXRlIjoxMjAwMDAwMDAwMDAwfX0="
+        },
+        {
+          "index_key": "storage.googleapis.com",
+          "schema_version": 0,
+          "attributes": {
+            "disable_dependent_services": null,
+            "disable_on_destroy": false,
+            "id": "datatalent-simplon/storage.googleapis.com",
+            "project": "datatalent-simplon",
+            "service": "storage.googleapis.com",
+            "timeouts": null
+          },
+          "sensitive_attributes": [],
+          "identity_schema_version": 0,
+          "private": "eyJlMmJmYjczMC1lY2FhLTExZTYtOGY4OC0zNDM2M2JjN2M0YzAiOnsiY3JlYXRlIjoxMjAwMDAwMDAwMDAwLCJkZWxldGUiOjEyMDAwMDAwMDAwMDAsInJlYWQiOjYwMDAwMDAwMDAwMCwidXBkYXRlIjoxMjAwMDAwMDAwMDAwfX0="
+        }
+      ]
+    },
+    {
+      "module": "module.bigquery",
+      "mode": "managed",
+      "type": "google_bigquery_dataset",
+      "name": "datasets",
+      "provider": "provider[\"registry.terraform.io/hashicorp/google\"]",
+      "instances": [
+        {
+          "index_key": "intermediate",
+          "schema_version": 0,
+          "attributes": {
+            "access": [
+              {
+                "dataset": [],
+                "domain": "",
+                "group_by_email": "",
+                "iam_member": "",
+                "role": "OWNER",
+                "routine": [],
+                "special_group": "",
+                "user_by_email": "melodybugnon@gmail.com",
+                "view": []
+              },
+              {
+                "dataset": [],
+                "domain": "",
+                "group_by_email": "",
+                "iam_member": "",
+                "role": "OWNER",
+                "routine": [],
+                "special_group": "projectOwners",
+                "user_by_email": "",
+                "view": []
+              },
+              {
+                "dataset": [],
+                "domain": "",
+                "group_by_email": "",
+                "iam_member": "",
+                "role": "READER",
+                "routine": [],
+                "special_group": "projectReaders",
+                "user_by_email": "",
+                "view": []
+              },
+              {
+                "dataset": [],
+                "domain": "",
+                "group_by_email": "",
+                "iam_member": "",
+                "role": "WRITER",
+                "routine": [],
+                "special_group": "projectWriters",
+                "user_by_email": "",
+                "view": []
+              }
+            ],
+            "creation_time": 1773235622552,
+            "dataset_id": "intermediate",
+            "default_collation": "",
+            "default_encryption_configuration": [],
+            "default_partition_expiration_ms": 0,
+            "default_table_expiration_ms": 0,
+            "delete_contents_on_destroy": false,
+            "description": "",
+            "effective_labels": {
+              "app": "datatalent",
+              "environment": "dev",
+              "managed_by": "terraform"
+            },
+            "etag": "fVEdhwcVaQMEheKoFn3HTQ==",
+            "external_dataset_reference": [],
+            "friendly_name": "",
+            "id": "projects/datatalent-simplon/datasets/intermediate",
+            "is_case_insensitive": false,
+            "labels": {
+              "app": "datatalent",
+              "environment": "dev",
+              "managed_by": "terraform"
+            },
+            "last_modified_time": 1773235622552,
+            "location": "EU",
+            "max_time_travel_hours": "168",
+            "project": "datatalent-simplon",
+            "resource_tags": {},
+            "self_link": "https://bigquery.googleapis.com/bigquery/v2/projects/datatalent-simplon/datasets/intermediate",
+            "storage_billing_model": "",
+            "terraform_labels": {
+              "app": "datatalent",
+              "environment": "dev",
+              "managed_by": "terraform"
+            },
+            "timeouts": null
+          },
+          "sensitive_attributes": [],
+          "identity_schema_version": 0,
+          "private": "eyJlMmJmYjczMC1lY2FhLTExZTYtOGY4OC0zNDM2M2JjN2M0YzAiOnsiY3JlYXRlIjoxMjAwMDAwMDAwMDAwLCJkZWxldGUiOjEyMDAwMDAwMDAwMDAsInVwZGF0ZSI6MTIwMDAwMDAwMDAwMH19",
+          "dependencies": [
+            "google_project_service.required"
+          ]
+        },
+        {
+          "index_key": "marts",
+          "schema_version": 0,
+          "attributes": {
+            "access": [
+              {
+                "dataset": [],
+                "domain": "",
+                "group_by_email": "",
+                "iam_member": "",
+                "role": "OWNER",
+                "routine": [],
+                "special_group": "",
+                "user_by_email": "melodybugnon@gmail.com",
+                "view": []
+              },
+              {
+                "dataset": [],
+                "domain": "",
+                "group_by_email": "",
+                "iam_member": "",
+                "role": "OWNER",
+                "routine": [],
+                "special_group": "projectOwners",
+                "user_by_email": "",
+                "view": []
+              },
+              {
+                "dataset": [],
+                "domain": "",
+                "group_by_email": "",
+                "iam_member": "",
+                "role": "READER",
+                "routine": [],
+                "special_group": "projectReaders",
+                "user_by_email": "",
+                "view": []
+              },
+              {
+                "dataset": [],
+                "domain": "",
+                "group_by_email": "",
+                "iam_member": "",
+                "role": "WRITER",
+                "routine": [],
+                "special_group": "projectWriters",
+                "user_by_email": "",
+                "view": []
+              }
+            ],
+            "creation_time": 1773235634872,
+            "dataset_id": "marts",
+            "default_collation": "",
+            "default_encryption_configuration": [],
+            "default_partition_expiration_ms": 0,
+            "default_table_expiration_ms": 0,
+            "delete_contents_on_destroy": false,
+            "description": "",
+            "effective_labels": {
+              "app": "datatalent",
+              "environment": "dev",
+              "managed_by": "terraform"
+            },
+            "etag": "p+8sT8X5Fewmhbq10zvW9g==",
+            "external_dataset_reference": [],
+            "friendly_name": "",
+            "id": "projects/datatalent-simplon/datasets/marts",
+            "is_case_insensitive": false,
+            "labels": {
+              "app": "datatalent",
+              "environment": "dev",
+              "managed_by": "terraform"
+            },
+            "last_modified_time": 1773235634872,
+            "location": "EU",
+            "max_time_travel_hours": "168",
+            "project": "datatalent-simplon",
+            "resource_tags": {},
+            "self_link": "https://bigquery.googleapis.com/bigquery/v2/projects/datatalent-simplon/datasets/marts",
+            "storage_billing_model": "",
+            "terraform_labels": {
+              "app": "datatalent",
+              "environment": "dev",
+              "managed_by": "terraform"
+            },
+            "timeouts": null
+          },
+          "sensitive_attributes": [],
+          "identity_schema_version": 0,
+          "private": "eyJlMmJmYjczMC1lY2FhLTExZTYtOGY4OC0zNDM2M2JjN2M0YzAiOnsiY3JlYXRlIjoxMjAwMDAwMDAwMDAwLCJkZWxldGUiOjEyMDAwMDAwMDAwMDAsInVwZGF0ZSI6MTIwMDAwMDAwMDAwMH19",
+          "dependencies": [
+            "google_project_service.required"
+          ]
+        },
+        {
+          "index_key": "staging",
+          "schema_version": 0,
+          "attributes": {
+            "access": [
+              {
+                "dataset": [],
+                "domain": "",
+                "group_by_email": "",
+                "iam_member": "",
+                "role": "OWNER",
+                "routine": [],
+                "special_group": "",
+                "user_by_email": "melodybugnon@gmail.com",
+                "view": []
+              },
+              {
+                "dataset": [],
+                "domain": "",
+                "group_by_email": "",
+                "iam_member": "",
+                "role": "OWNER",
+                "routine": [],
+                "special_group": "projectOwners",
+                "user_by_email": "",
+                "view": []
+              },
+              {
+                "dataset": [],
+                "domain": "",
+                "group_by_email": "",
+                "iam_member": "",
+                "role": "READER",
+                "routine": [],
+                "special_group": "projectReaders",
+                "user_by_email": "",
+                "view": []
+              },
+              {
+                "dataset": [],
+                "domain": "",
+                "group_by_email": "",
+                "iam_member": "",
+                "role": "WRITER",
+                "routine": [],
+                "special_group": "projectWriters",
+                "user_by_email": "",
+                "view": []
+              }
+            ],
+            "creation_time": 1773235604066,
+            "dataset_id": "staging",
+            "default_collation": "",
+            "default_encryption_configuration": [],
+            "default_partition_expiration_ms": 0,
+            "default_table_expiration_ms": 0,
+            "delete_contents_on_destroy": false,
+            "description": "",
+            "effective_labels": {
+              "app": "datatalent",
+              "environment": "dev",
+              "managed_by": "terraform"
+            },
+            "etag": "gS+uHk6Z14VB2siqSL5YqQ==",
+            "external_dataset_reference": [],
+            "friendly_name": "",
+            "id": "projects/datatalent-simplon/datasets/staging",
+            "is_case_insensitive": false,
+            "labels": {
+              "app": "datatalent",
+              "environment": "dev",
+              "managed_by": "terraform"
+            },
+            "last_modified_time": 1773235604066,
+            "location": "EU",
+            "max_time_travel_hours": "168",
+            "project": "datatalent-simplon",
+            "resource_tags": {},
+            "self_link": "https://bigquery.googleapis.com/bigquery/v2/projects/datatalent-simplon/datasets/staging",
+            "storage_billing_model": "",
+            "terraform_labels": {
+              "app": "datatalent",
+              "environment": "dev",
+              "managed_by": "terraform"
+            },
+            "timeouts": null
+          },
+          "sensitive_attributes": [],
+          "identity_schema_version": 0,
+          "private": "eyJlMmJmYjczMC1lY2FhLTExZTYtOGY4OC0zNDM2M2JjN2M0YzAiOnsiY3JlYXRlIjoxMjAwMDAwMDAwMDAwLCJkZWxldGUiOjEyMDAwMDAwMDAwMDAsInVwZGF0ZSI6MTIwMDAwMDAwMDAwMH19",
+          "dependencies": [
+            "google_project_service.required"
+          ]
+        }
+      ]
+    },
+    {
+      "module": "module.cloud_run_job",
+      "mode": "managed",
+      "type": "google_cloud_run_v2_job",
+      "name": "ingestion",
+      "provider": "provider[\"registry.terraform.io/hashicorp/google\"]",
+      "instances": [
+        {
+          "status": "tainted",
+          "schema_version": 0,
+          "attributes": {
+            "annotations": null,
+            "binary_authorization": [],
+            "client": null,
+            "client_version": null,
+            "conditions": null,
+            "create_time": null,
+            "creator": null,
+            "delete_time": null,
+            "effective_annotations": null,
+            "effective_labels": {
+              "app": "datatalent",
+              "environment": "dev",
+              "managed_by": "terraform"
+            },
+            "etag": null,
+            "execution_count": null,
+            "expire_time": null,
+            "generation": null,
+            "id": "projects/datatalent-simplon/locations/europe-west1/jobs/datatalent-ingestion",
+            "labels": {
+              "app": "datatalent",
+              "environment": "dev",
+              "managed_by": "terraform"
+            },
+            "last_modifier": null,
+            "latest_created_execution": null,
+            "launch_stage": null,
+            "location": "europe-west1",
+            "name": "datatalent-ingestion",
+            "observed_generation": null,
+            "project": "datatalent-simplon",
+            "reconciling": null,
+            "template": [
+              {
+                "annotations": null,
+                "labels": null,
+                "parallelism": 1,
+                "task_count": 1,
+                "template": [
+                  {
+                    "containers": [
+                      {
+                        "args": null,
+                        "command": null,
+                        "env": [],
+                        "image": "europe-west1-docker.pkg.dev/datatalent-simplon/datatalent/pipeline:latest",
+                        "name": "",
+                        "ports": [],
+                        "resources": [
+                          {
+                            "limits": {
+                              "cpu": "1",
+                              "memory": "512Mi"
+                            }
+                          }
+                        ],
+                        "volume_mounts": [],
+                        "working_dir": ""
+                      }
+                    ],
+                    "encryption_key": "",
+                    "execution_environment": "",
+                    "max_retries": 1,
+                    "service_account": "datatalent-pipeline@datatalent-simplon.iam.gserviceaccount.com",
+                    "timeout": "3600s",
+                    "volumes": [],
+                    "vpc_access": []
+                  }
+                ]
+              }
+            ],
+            "terminal_condition": null,
+            "terraform_labels": {
+              "app": "datatalent",
+              "environment": "dev",
+              "managed_by": "terraform"
+            },
+            "timeouts": null,
+            "uid": null,
+            "update_time": null
+          },
+          "sensitive_attributes": [],
+          "identity_schema_version": 0,
+          "private": "eyJlMmJmYjczMC1lY2FhLTExZTYtOGY4OC0zNDM2M2JjN2M0YzAiOnsiY3JlYXRlIjoxMjAwMDAwMDAwMDAwLCJkZWxldGUiOjEyMDAwMDAwMDAwMDAsInVwZGF0ZSI6MTIwMDAwMDAwMDAwMH19",
+          "dependencies": [
+            "google_project_service.required",
+            "module.service_account.google_service_account.pipeline"
+          ]
+        }
+      ]
+    },
+    {
+      "module": "module.secret_manager",
+      "mode": "managed",
+      "type": "google_secret_manager_secret",
+      "name": "secrets",
+      "provider": "provider[\"registry.terraform.io/hashicorp/google\"]",
+      "instances": [
+        {
+          "index_key": "france-travail-client-id",
+          "schema_version": 0,
+          "attributes": {
+            "annotations": null,
+            "create_time": "2026-04-09T14:09:57.438621Z",
+            "effective_annotations": {},
+            "effective_labels": {
+              "app": "datatalent",
+              "environment": "dev",
+              "managed_by": "terraform"
+            },
+            "expire_time": "",
+            "id": "projects/datatalent-simplon/secrets/france-travail-client-id",
+            "labels": {
+              "app": "datatalent",
+              "environment": "dev",
+              "managed_by": "terraform"
+            },
+            "name": "projects/665636226143/secrets/france-travail-client-id",
+            "project": "datatalent-simplon",
+            "replication": [
+              {
+                "auto": [
+                  {
+                    "customer_managed_encryption": []
+                  }
+                ],
+                "user_managed": []
+              }
+            ],
+            "rotation": [],
+            "secret_id": "france-travail-client-id",
+            "terraform_labels": {
+              "app": "datatalent",
+              "environment": "dev",
+              "managed_by": "terraform"
+            },
+            "timeouts": null,
+            "topics": [],
+            "ttl": null,
+            "version_aliases": null,
+            "version_destroy_ttl": ""
+          },
+          "sensitive_attributes": [],
+          "identity_schema_version": 0,
+          "private": "eyJlMmJmYjczMC1lY2FhLTExZTYtOGY4OC0zNDM2M2JjN2M0YzAiOnsiY3JlYXRlIjoxMjAwMDAwMDAwMDAwLCJkZWxldGUiOjEyMDAwMDAwMDAwMDAsInVwZGF0ZSI6MTIwMDAwMDAwMDAwMH19",
+          "dependencies": [
+            "google_project_service.required"
+          ]
+        },
+        {
+          "index_key": "france-travail-client-secret",
+          "schema_version": 0,
+          "attributes": {
+            "annotations": null,
+            "create_time": "2026-04-09T14:09:57.417457Z",
+            "effective_annotations": {},
+            "effective_labels": {
+              "app": "datatalent",
+              "environment": "dev",
+              "managed_by": "terraform"
+            },
+            "expire_time": "",
+            "id": "projects/datatalent-simplon/secrets/france-travail-client-secret",
+            "labels": {
+              "app": "datatalent",
+              "environment": "dev",
+              "managed_by": "terraform"
+            },
+            "name": "projects/665636226143/secrets/france-travail-client-secret",
+            "project": "datatalent-simplon",
+            "replication": [
+              {
+                "auto": [
+                  {
+                    "customer_managed_encryption": []
+                  }
+                ],
+                "user_managed": []
+              }
+            ],
+            "rotation": [],
+            "secret_id": "france-travail-client-secret",
+            "terraform_labels": {
+              "app": "datatalent",
+              "environment": "dev",
+              "managed_by": "terraform"
+            },
+            "timeouts": null,
+            "topics": [],
+            "ttl": null,
+            "version_aliases": null,
+            "version_destroy_ttl": ""
+          },
+          "sensitive_attributes": [],
+          "identity_schema_version": 0,
+          "private": "eyJlMmJmYjczMC1lY2FhLTExZTYtOGY4OC0zNDM2M2JjN2M0YzAiOnsiY3JlYXRlIjoxMjAwMDAwMDAwMDAwLCJkZWxldGUiOjEyMDAwMDAwMDAwMDAsInVwZGF0ZSI6MTIwMDAwMDAwMDAwMH19",
+          "dependencies": [
+            "google_project_service.required"
+          ]
+        }
+      ]
+    },
+    {
+      "module": "module.service_account",
+      "mode": "managed",
+      "type": "google_service_account",
+      "name": "pipeline",
+      "provider": "provider[\"registry.terraform.io/hashicorp/google\"]",
+      "instances": [
+        {
+          "schema_version": 0,
+          "attributes": {
+            "account_id": "datatalent-pipeline",
+            "create_ignore_already_exists": null,
+            "description": "",
+            "disabled": false,
+            "display_name": "DataTalent Pipeline Service Account",
+            "email": "datatalent-pipeline@datatalent-simplon.iam.gserviceaccount.com",
+            "id": "projects/datatalent-simplon/serviceAccounts/datatalent-pipeline@datatalent-simplon.iam.gserviceaccount.com",
+            "member": "serviceAccount:datatalent-pipeline@datatalent-simplon.iam.gserviceaccount.com",
+            "name": "projects/datatalent-simplon/serviceAccounts/datatalent-pipeline@datatalent-simplon.iam.gserviceaccount.com",
+            "project": "datatalent-simplon",
+            "timeouts": null,
+            "unique_id": "118348463020097177206"
+          },
+          "sensitive_attributes": [],
+          "identity_schema_version": 0,
+          "private": "eyJlMmJmYjczMC1lY2FhLTExZTYtOGY4OC0zNDM2M2JjN2M0YzAiOnsiY3JlYXRlIjozMDAwMDAwMDAwMDB9fQ==",
+          "dependencies": [
+            "google_project_service.required"
+          ]
+        }
+      ]
+    },
+    {
+      "module": "module.storage",
+      "mode": "managed",
+      "type": "google_storage_bucket",
+      "name": "raw",
+      "provider": "provider[\"registry.terraform.io/hashicorp/google\"]",
+      "instances": [
+        {
+          "schema_version": 2,
+          "attributes": {
+            "autoclass": [],
+            "cors": [],
+            "custom_placement_config": [],
+            "default_event_based_hold": false,
+            "effective_labels": {
+              "app": "datatalent",
+              "environment": "dev",
+              "managed_by": "terraform"
+            },
+            "enable_object_retention": false,
+            "encryption": [],
+            "force_destroy": false,
+            "id": "datatalent-raw-datatalent-simplon",
+            "labels": {
+              "app": "datatalent",
+              "environment": "dev",
+              "managed_by": "terraform"
+            },
+            "lifecycle_rule": [],
+            "location": "EU",
+            "logging": [],
+            "name": "datatalent-raw-datatalent-simplon",
+            "project": "datatalent-simplon",
+            "project_number": 665636226143,
+            "public_access_prevention": "enforced",
+            "requester_pays": false,
+            "retention_policy": [],
+            "rpo": "DEFAULT",
+            "self_link": "https://www.googleapis.com/storage/v1/b/datatalent-raw-datatalent-simplon",
+            "soft_delete_policy": [
+              {
+                "effective_time": "2026-04-09T14:10:00.018Z",
+                "retention_duration_seconds": 604800
+              }
+            ],
+            "storage_class": "STANDARD",
+            "terraform_labels": {
+              "app": "datatalent",
+              "environment": "dev",
+              "managed_by": "terraform"
+            },
+            "timeouts": null,
+            "uniform_bucket_level_access": true,
+            "url": "gs://datatalent-raw-datatalent-simplon",
+            "versioning": [
+              {
+                "enabled": true
+              }
+            ],
+            "website": []
+          },
+          "sensitive_attributes": [],
+          "identity_schema_version": 0,
+          "private": "eyJlMmJmYjczMC1lY2FhLTExZTYtOGY4OC0zNDM2M2JjN2M0YzAiOnsiY3JlYXRlIjo2MDAwMDAwMDAwMDAsInJlYWQiOjI0MDAwMDAwMDAwMCwidXBkYXRlIjoyNDAwMDAwMDAwMDB9LCJzY2hlbWFfdmVyc2lvbiI6IjIifQ==",
+          "dependencies": [
+            "google_project_service.required"
+          ]
+        }
+      ]
+    }
+  ],
+  "check_results": null
+}

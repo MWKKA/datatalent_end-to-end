@@ -1,0 +1,12 @@
+project_id      = "datatalent-simplon"
+project_name    = "datatalent"
+region          = "europe-west1"
+bq_location     = "EU"
+bucket_location = "EU"
+
+# Remplace par l'image de ton job d'ingestion
+pipeline_image = "europe-west1-docker.pkg.dev/datatalent-simplon/datatalent/pipeline:latest"
+
+# Tous les jours à 06:00 Europe/Paris
+scheduler_cron     = "0 6 * * *"
+scheduler_timezone = "Europe/Paris"
