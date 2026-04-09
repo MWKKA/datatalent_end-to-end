@@ -1,0 +1,15 @@
+version: 2
+
+sources:
+  - name: raw
+    database: datatalent-simplon
+    schema: raw
+    tables:
+      - name: offres_enriched_team
+      - name: raw_offres_team
+
+  - name: staging
+    database: datatalent-simplon
+    schema: staging
+    tables:
+      - name: offres_staging

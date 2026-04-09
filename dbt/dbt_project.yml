@@ -1,0 +1,32 @@
+name: "datatalent_bq"
+version: "1.0.0"
+config-version: 2
+
+profile: "datatalent_bq"
+
+model-paths: ["models"]
+snapshot-paths: ["snapshots"]
+test-paths: ["tests"]
+seed-paths: ["seeds"]
+macro-paths: ["macros"]
+analysis-paths: ["analyses"]
+target-path: "target"
+clean-targets: ["target", "dbt_packages"]
+
+models:
+  datatalent_bq:
+    +persist_docs:
+      relation: true
+      columns: true
+    staging:
+      +schema: staging
+      +materialized: table
+    intermediate:
+      +schema: intermediate
+    marts:
+      +schema: marts
+      +materialized: table
+
+snapshots:
+  datatalent_bq:
+    +target_schema: intermediate

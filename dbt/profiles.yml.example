@@ -1,0 +1,13 @@
+datatalent_bq:
+  target: dev
+  outputs:
+    dev:
+      type: bigquery
+      method: oauth
+      project: datatalent-simplon
+      dataset: staging
+      threads: 4
+      location: EU
+      priority: interactive
+      timeout_seconds: 300
+      retries: 1
