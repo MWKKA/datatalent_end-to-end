@@ -1,0 +1,54 @@
+# --- VCS & caches ---
+.git
+.github
+.gitignore
+**/.venv
+**/.venv/**
+**/__pycache__
+**/*.py[cod]
+**/.pytest_cache
+**/.ruff_cache
+**/.mypy_cache
+.idea
+.vscode
+*.swp
+*~
+
+# --- Non requis par l’image pipeline (job = scripts.pipeline.run_ingestion_job) ---
+archive/
+dbt/
+terraform/
+
+# --- Fichiers locaux / secrets (Cloud Run injecte l’env) ---
+.env
+.env.*
+!.env.example
+
+# --- Docs racine (le conteneur n’a besoin que de requirements + scripts) ---
+*.md
+
+# --- Données binaires souvent volumineuses ---
+**/*.sqlite
+**/*.sqlite3
+**/*.db
+*.parquet
+*.feather
+*.ndjson
+*.zip
+*.tar
+*.tar.gz
+
+# --- Builds Python locaux ---
+dist/
+build/
+*.egg-info/
+htmlcov/
+.coverage
+
+# --- Terraform state / logs ---
+terraform/.terraform
+terraform/*.tfstate
+terraform/*.tfstate.*
+logs
+dbt/target
+dbt/logs

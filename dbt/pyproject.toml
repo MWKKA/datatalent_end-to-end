@@ -1,0 +1,9 @@
+# Environnement uv **uniquement pour dbt** (dossier dbt/).
+# Évite le conflit avec le projet racine (google-cloud-storage >= 3.9 vs contrainte dbt-bigquery).
+[project]
+name = "datatalent-dbt"
+version = "0.1.0"
+requires-python = ">=3.11"
+dependencies = [
+    "dbt-bigquery>=1.8.0",
+]

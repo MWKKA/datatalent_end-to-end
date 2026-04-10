@@ -1,10 +1,14 @@
 version: 2
 
 sources:
-  - name: staging
+  - name: raw
     database: datatalent-simplon
-    schema: staging
+    schema: raw
     tables:
-      - name: offres_enriched_clean
-      - name: offres_staging
-      - name: adzuna_jobs_clean
+      - name: communes_raw
+        description: "Référentiel communes (CSV data.gouv) — colonnes chargées en STRING pour préserver 2A/2B et zéros initiaux."
+      - name: raw_offres_team
+        description: "Offres brutes FT + Adzuna (payload_json) — alimenté par le job Cloud Run."
+      - name: offres_enriched_team
+        description: "Offres enrichies Sirene (API) — MERGE depuis le job Cloud Run."
+

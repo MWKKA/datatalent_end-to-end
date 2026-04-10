@@ -7,6 +7,25 @@ bucket_location = "EU"
 # Remplace par l'image de ton job d'ingestion
 pipeline_image = "europe-west1-docker.pkg.dev/datatalent-simplon/datatalent/pipeline:latest"
 
-# Tous les jours à 06:00 Europe/Paris
+# Planning prévu : tous les jours à 06:00 Europe/Paris (effectif seulement si create_scheduler = true).
 scheduler_cron     = "0 6 * * *"
 scheduler_timezone = "Europe/Paris"
+
+# Service account dedie + IAM gere par Terraform
+pipeline_service_account_id           = "datatalent-pipeline"
+pipeline_service_account_display_name = "DataTalent Pipeline Service Account"
+scheduler_service_account_id          = "datatalent-scheduler"
+scheduler_service_account_display_name = "DataTalent Scheduler Service Account"
+manage_project_iam                    = false
+manage_secret_iam                     = false
+manage_dataset_iam                    = false
+manage_bucket_iam                     = true
+
+create_cloud_run_job = true
+
+# false = pas de déclenchement automatique (ex. rendu scolaire) ; true = Cloud Scheduler quotidien (voir main.tf).
+create_scheduler = false
+
+# Parametres d'ingestion
+ingest_mots_cles   = "data engineer"
+ingest_max_results = 3000

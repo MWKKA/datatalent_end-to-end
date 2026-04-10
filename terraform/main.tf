@@ -34,7 +34,7 @@ module "bigquery" {
 
   project_id  = var.project_id
   location    = var.bq_location
-  dataset_ids = ["staging", "intermediate", "marts"]
+  dataset_ids = ["raw", "staging", "intermediate", "marts"]
   labels      = var.manage_dataset_labels ? var.labels : {}
 
   depends_on = [google_project_service.required]
@@ -44,19 +44,39 @@ module "service_account" {
   source = "./modules/service_account"
 
   project_id   = var.project_id
-  account_id   = "${var.project_name}-pipeline"
-  display_name = "DataTalent Pipeline Service Account"
-  project_roles = var.manage_project_iam ? [
-    "roles/bigquery.dataEditor",
-    "roles/bigquery.jobUser",
-    "roles/logging.logWriter",
-    "roles/run.developer",
-    "roles/run.invoker",
-    "roles/secretmanager.secretAccessor",
-    "roles/storage.objectAdmin"
-  ] : []
+  account_id   = var.pipeline_service_account_id
+  display_name = var.pipeline_service_account_display_name
+  project_roles = var.manage_project_iam ? var.pipeline_service_account_roles : []
 
   depends_on = [google_project_service.required]
+}
+
+module "scheduler_service_account" {
+  source = "./modules/service_account"
+
+  project_id   = var.project_id
+  account_id   = var.scheduler_service_account_id
+  display_name = var.scheduler_service_account_display_name
+  project_roles = var.manage_project_iam ? var.scheduler_service_account_roles : []
+
+  depends_on = [google_project_service.required]
+}
+
+resource "google_bigquery_dataset_iam_member" "pipeline_dataset_editor" {
+  for_each = var.manage_dataset_iam ? toset(module.bigquery.dataset_ids) : toset([])
+
+  project    = var.project_id
+  dataset_id = each.value
+  role       = var.pipeline_bigquery_dataset_role
+  member     = "serviceAccount:${module.service_account.email}"
+}
+
+resource "google_storage_bucket_iam_member" "pipeline_bucket_roles" {
+  for_each = var.manage_bucket_iam ? toset(var.pipeline_bucket_roles) : toset([])
+
+  bucket = module.storage.bucket_name
+  role   = each.value
+  member = "serviceAccount:${module.service_account.email}"
 }
 
 module "secret_manager" {
@@ -81,10 +101,26 @@ module "cloud_run_job" {
   image                 = var.pipeline_image
   service_account_email = module.service_account.email
   labels                = var.labels
+  env_vars = {
+    GCS_BUCKET_NAME    = module.storage.bucket_name
+    BQ_PROJECT_ID      = var.project_id
+    BQ_DATASET_RAW     = "raw"
+    INGEST_MOTS_CLES   = var.ingest_mots_cles
+    INGEST_MAX_RESULTS = tostring(var.ingest_max_results)
+  }
+  secret_env_vars = {
+    FRANCE_TRAVAIL_CLIENT_ID     = "france-travail-client-id"
+    FRANCE_TRAVAIL_CLIENT_SECRET = "france-travail-client-secret"
+    ADZUNA_APP_ID                = "adzuna-app-id"
+    ADZUNA_APP_KEY               = "adzuna-app-key"
+    SIRENE_API_KEY               = "sirene-api-key"
+  }
 
   depends_on = [google_project_service.required]
 }
 
+# Déclenchement quotidien du job d'ingestion (Cloud Scheduler → Cloud Run Job).
+# Désactivable via var.create_scheduler (ex. tfvars scolaire) sans retirer ce code : la soutenance peut montrer le module complet.
 module "scheduler" {
   count  = var.create_scheduler && var.create_cloud_run_job ? 1 : 0
   source = "./modules/scheduler"
@@ -95,7 +131,7 @@ module "scheduler" {
   schedule                  = var.scheduler_cron
   time_zone                 = var.scheduler_timezone
   target_uri                = module.cloud_run_job[0].run_uri
-  scheduler_service_account = module.service_account.email
+  scheduler_service_account = module.scheduler_service_account.email
 
   depends_on = [google_project_service.required]
 }

@@ -9,6 +9,6 @@ SELECT
   MIN(salary_min) AS adzuna_min_salary_min,
   MAX(salary_max) AS adzuna_max_salary_max,
   MAX(created_at) AS adzuna_latest_created_at
-FROM {{ source('staging', 'adzuna_jobs_clean') }}
+FROM {{ ref('stg_adzuna_jobs_clean') }}
 WHERE company_name_clean IS NOT NULL
 GROUP BY company_name_clean

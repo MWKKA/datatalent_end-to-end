@@ -1,2 +1,1 @@
-"""Composants utilitaires partages."""
-
+"""Outils communs pour les scripts du projet."""

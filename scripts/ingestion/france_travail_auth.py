@@ -1,84 +1,58 @@
-"""
-Authentification OAuth2 Client Credentials pour l'API France Travail.
-"""
+"""Authentification OAuth2 France Travail (client credentials)."""
 
 from __future__ import annotations
 
 import os
 import time
-from typing import NamedTuple
-from pathlib import Path
-import sys
 
 import requests
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
-
-from scripts.core.common import load_project_env
-
-TOKEN_URL = "https://authentification-partenaire.francetravail.io/connexion/oauth2/access_token"
-REALM = "/partenaire"
-DEFAULT_SCOPE = "api_offresdemploiv2 o2dsoffre"
-_cache: tuple[str, float] | None = None
-BUFFER_SECONDS = 60
+TOKEN_URL = "https://entreprise.francetravail.fr/connexion/oauth2/access_token?realm=/partenaire"
+SCOPE = "api_offresdemploiv2 o2dsoffre"
+REQUEST_TIMEOUT_SECONDS = 30
+_TOKEN_CACHE: dict[str, float | str] = {}
 
 
-class TokenResponse(NamedTuple):
-    access_token: str
-    expires_in: int
-    token_type: str
-    scope: str
+def _require_env(name: str) -> str:
+    value = (os.environ.get(name) or "").strip()
+    if not value:
+        raise ValueError(f"La variable d'environnement {name} est requise.")
+    return value
 
 
-def fetch_token(client_id: str, client_secret: str, scope: str = DEFAULT_SCOPE) -> TokenResponse:
-    resp = requests.post(
+def _is_cached_token_valid() -> bool:
+    token = _TOKEN_CACHE.get("access_token")
+    expires_at = float(_TOKEN_CACHE.get("expires_at", 0))
+    return bool(token) and time.time() < expires_at
+
+
+def get_access_token() -> str:
+    """Retourne un token d'acces France Travail, avec cache en memoire."""
+    if _is_cached_token_valid():
+        return str(_TOKEN_CACHE["access_token"])
+
+    client_id = _require_env("FRANCE_TRAVAIL_CLIENT_ID")
+    client_secret = _require_env("FRANCE_TRAVAIL_CLIENT_SECRET")
+
+    response = requests.post(
         TOKEN_URL,
-        params={"realm": REALM},
-        headers={"Content-Type": "application/x-www-form-urlencoded"},
         data={
             "grant_type": "client_credentials",
             "client_id": client_id,
             "client_secret": client_secret,
-            "scope": scope,
+            "scope": SCOPE,
         },
-        timeout=30,
+        timeout=REQUEST_TIMEOUT_SECONDS,
     )
-    resp.raise_for_status()
-    data = resp.json()
-    return TokenResponse(
-        access_token=data["access_token"],
-        expires_in=data["expires_in"],
-        token_type=data.get("token_type", "Bearer"),
-        scope=data.get("scope", scope),
-    )
+    response.raise_for_status()
 
+    payload = response.json()
+    access_token = payload.get("access_token")
+    expires_in = int(payload.get("expires_in", 0))
+    if not access_token:
+        raise RuntimeError("Token France Travail absent de la reponse OAuth2.")
 
-def get_access_token(
-    client_id: str | None = None,
-    client_secret: str | None = None,
-    scope: str = DEFAULT_SCOPE,
-    *,
-    force_refresh: bool = False,
-) -> str:
-    global _cache
-    client_id = client_id or os.environ.get("FRANCE_TRAVAIL_CLIENT_ID")
-    client_secret = client_secret or os.environ.get("FRANCE_TRAVAIL_CLIENT_SECRET")
-    if not client_id or not client_secret:
-        raise ValueError("FRANCE_TRAVAIL_CLIENT_ID et FRANCE_TRAVAIL_CLIENT_SECRET doivent etre definis")
-
-    now = time.monotonic()
-    if not force_refresh and _cache is not None:
-        token, expires_at = _cache
-        if now < expires_at:
-            return token
-
-    result = fetch_token(client_id, client_secret, scope)
-    _cache = (result.access_token, now + result.expires_in - BUFFER_SECONDS)
-    return result.access_token
-
-
-if __name__ == "__main__":
-    load_project_env()
-    token = get_access_token()
-    print("Token obtenu (debut):", token[:30] + "...")
-
+    # Marge de securite pour eviter d'utiliser un token presque expire.
+    _TOKEN_CACHE["access_token"] = access_token
+    _TOKEN_CACHE["expires_at"] = time.time() + max(expires_in - 60, 60)
+    return str(access_token)

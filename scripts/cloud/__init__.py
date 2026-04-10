@@ -1,2 +1,0 @@
-"""Scripts cloud (GCS / BigQuery)."""
-

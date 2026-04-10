@@ -4,8 +4,13 @@ output "raw_bucket_name" {
 }
 
 output "pipeline_service_account" {
-  description = "Service account email used by pipeline and scheduler"
+  description = "Service account email used by Cloud Run pipeline job"
   value       = module.service_account.email
+}
+
+output "scheduler_service_account" {
+  description = "Service account email used by Cloud Scheduler trigger"
+  value       = module.scheduler_service_account.email
 }
 
 output "cloud_run_job_name" {

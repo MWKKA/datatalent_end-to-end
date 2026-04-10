@@ -1,2 +1,1 @@
-"""Scripts d'ingestion des sources externes."""
-
+"""Modules d'ingestion des sources externes."""

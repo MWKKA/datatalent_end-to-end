@@ -36,8 +36,8 @@ SELECT
   ac.adzuna_min_salary_min,
   ac.adzuna_max_salary_max,
   ac.adzuna_latest_created_at
-FROM {{ source('staging', 'offres_enriched_clean') }} oe
-LEFT JOIN {{ source('staging', 'offres_staging') }} os
+FROM {{ ref('stg_offres_enriched_clean') }} AS oe
+LEFT JOIN {{ ref('stg_offres_staging') }} AS os
   ON oe.offer_id = os.id_offre
-LEFT JOIN {{ ref('int_adzuna_company_metrics') }} ac
+LEFT JOIN {{ ref('int_adzuna_company_metrics') }} AS ac
   ON oe.company_name_clean = ac.company_name_clean

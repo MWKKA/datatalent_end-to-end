@@ -201,6 +201,12 @@ location_std AS (
     ) AS departement_std
   FROM location_inner
 ),
+enriched_norm AS (
+  SELECT
+    *,
+    {{ normalize_job_title_sql('job_title') }} AS job_title_norm
+  FROM location_std
+),
 enriched AS (
   SELECT
     *,
@@ -300,24 +306,42 @@ enriched AS (
     END AS experience_group,
     CASE
       WHEN job_title IS NULL THEN 'Autre'
-      WHEN REGEXP_CONTAINS(LOWER(job_title), r'\bdata engineer\b') THEN 'Data Engineer'
-      WHEN REGEXP_CONTAINS(LOWER(job_title), r'ing[eé]nieur data') THEN 'Data Engineer'
-      WHEN REGEXP_CONTAINS(LOWER(job_title), r'\bdata analyst\b') THEN 'Data Analyst'
-      WHEN REGEXP_CONTAINS(LOWER(job_title), r'analyste data') THEN 'Data Analyst'
-      WHEN REGEXP_CONTAINS(LOWER(job_title), r'\bdata scientist\b') THEN 'Data Scientist'
-      WHEN REGEXP_CONTAINS(LOWER(job_title), r'\bml engineer\b|\bmachine learning engineer\b') THEN 'ML Engineer'
-      WHEN REGEXP_CONTAINS(LOWER(job_title), r'\bbi\b|\bbusiness intelligence\b|\banalyst\b') THEN 'BI / Analytics'
-      WHEN REGEXP_CONTAINS(LOWER(job_title), r'\bdata\b') THEN 'Autre métier data'
+      WHEN REGEXP_CONTAINS(job_title_norm, r'data[\s\-_/]+engineer') THEN 'Data Engineer'
+      WHEN REGEXP_CONTAINS(job_title_norm, r'big[\s\-_/]+data[\s\-_/]+engineer') THEN 'Data Engineer'
+      WHEN REGEXP_CONTAINS(job_title_norm, r'lead[\s\-_/]+data[\s\-_/]+engineer') THEN 'Data Engineer'
+      WHEN REGEXP_CONTAINS(job_title_norm, r'tech[\s\-_/]+lead[\s\S]{0,120}data[\s\-_/]+engineer') THEN 'Data Engineer'
+      WHEN REGEXP_CONTAINS(
+        job_title_norm,
+        r'data[\s\-_/]+architect[\s\S]{0,80}data[\s\-_/]+engineer|data[\s\-_/]+engineer[\s\S]{0,80}data[\s\-_/]+architect'
+      ) THEN 'Data Engineer'
+      WHEN REGEXP_CONTAINS(job_title_norm, r'd[eé]veloppeur[\s\-_/]+big[\s\-_/]+data') THEN 'Data Engineer'
+      WHEN REGEXP_CONTAINS(job_title_norm, r'\bdata engineer\b') THEN 'Data Engineer'
+      WHEN REGEXP_CONTAINS(job_title_norm, r'ing[eé]nieur[\s\-_/]+data|\bing[eé]nieur data\b') THEN 'Data Engineer'
+      WHEN REGEXP_CONTAINS(job_title_norm, r'\bdata analyst\b') THEN 'Data Analyst'
+      WHEN REGEXP_CONTAINS(job_title_norm, r'analyste data') THEN 'Data Analyst'
+      WHEN REGEXP_CONTAINS(job_title_norm, r'\bdata scientist\b') THEN 'Data Scientist'
+      WHEN REGEXP_CONTAINS(job_title_norm, r'\bml engineer\b|\bmachine learning engineer\b') THEN 'ML Engineer'
+      WHEN REGEXP_CONTAINS(job_title_norm, r'\bbi\b|\bbusiness intelligence\b|\banalyst\b') THEN 'BI / Analytics'
+      WHEN REGEXP_CONTAINS(job_title_norm, r'\bdata\b') THEN 'Autre métier data'
       ELSE 'Autre'
     END AS job_family,
     CASE
       WHEN job_title IS NULL THEN FALSE
-      WHEN REGEXP_CONTAINS(LOWER(job_title), r'\bdata engineer\b') THEN TRUE
-      WHEN REGEXP_CONTAINS(LOWER(job_title), r'ing[eé]nieur data') THEN TRUE
-      WHEN REGEXP_CONTAINS(LOWER(job_title), r'\bdatabricks\b') THEN TRUE
-      WHEN REGEXP_CONTAINS(LOWER(job_title), r'\betl\b') THEN TRUE
-      WHEN REGEXP_CONTAINS(LOWER(job_title), r'big data') THEN TRUE
-      WHEN REGEXP_CONTAINS(LOWER(job_title), r'cloud data') THEN TRUE
+      WHEN REGEXP_CONTAINS(job_title_norm, r'data[\s\-_/]+engineer') THEN TRUE
+      WHEN REGEXP_CONTAINS(job_title_norm, r'big[\s\-_/]+data[\s\-_/]+engineer') THEN TRUE
+      WHEN REGEXP_CONTAINS(job_title_norm, r'lead[\s\-_/]+data[\s\-_/]+engineer') THEN TRUE
+      WHEN REGEXP_CONTAINS(job_title_norm, r'tech[\s\-_/]+lead[\s\S]{0,120}data[\s\-_/]+engineer') THEN TRUE
+      WHEN REGEXP_CONTAINS(
+        job_title_norm,
+        r'data[\s\-_/]+architect[\s\S]{0,80}data[\s\-_/]+engineer|data[\s\-_/]+engineer[\s\S]{0,80}data[\s\-_/]+architect'
+      ) THEN TRUE
+      WHEN REGEXP_CONTAINS(job_title_norm, r'd[eé]veloppeur[\s\-_/]+big[\s\-_/]+data') THEN TRUE
+      WHEN REGEXP_CONTAINS(job_title_norm, r'\bdata engineer\b') THEN TRUE
+      WHEN REGEXP_CONTAINS(job_title_norm, r'ing[eé]nieur[\s\-_/]+data|\bing[eé]nieur data\b') THEN TRUE
+      WHEN REGEXP_CONTAINS(job_title_norm, r'\bdatabricks\b') THEN TRUE
+      WHEN REGEXP_CONTAINS(job_title_norm, r'\betl\b') THEN TRUE
+      WHEN REGEXP_CONTAINS(job_title_norm, r'big data') THEN TRUE
+      WHEN REGEXP_CONTAINS(job_title_norm, r'cloud data') THEN TRUE
       ELSE FALSE
     END AS is_data_engineer,
     CASE
@@ -344,7 +368,7 @@ enriched AS (
         COALESCE({{ departement_libelle_case('departement_std') }}, 'Inconnu')
       )
     END AS departement_label
-  FROM location_std
+  FROM enriched_norm
 )
 SELECT
   offer_id,

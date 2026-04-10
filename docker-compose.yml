@@ -1,0 +1,13 @@
+services:
+  ingestion:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: datatalent-pipeline:local
+    env_file:
+      - .env
+    environment:
+      BQ_DATASET_RAW: raw
+      INGEST_MOTS_CLES: data engineer
+      INGEST_MAX_RESULTS: "3000"
+    command: ["python", "-m", "scripts.pipeline.run_ingestion_job"]

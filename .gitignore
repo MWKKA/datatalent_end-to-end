@@ -226,3 +226,9 @@ logs/
 
 # Données locales (raw, DB)
 data/
+
+# Archive — bases et exports locaux (ne pas versionner)
+archive/**/*.db
+archive/**/*.sqlite
+archive/**/exports/
+archive/**/__pycache__/

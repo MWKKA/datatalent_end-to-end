@@ -1,6 +1,39 @@
 version: 2
 
 models:
+  - name: stg_offres_enriched_clean
+    description: "Pont raw.offres_enriched_team + raw_offres_team → staging (Sirene + champs communs offre)."
+    columns:
+      - name: offer_id
+        tests:
+          - not_null
+          - unique
+
+  - name: stg_offres_staging
+    description: "Détail France Travail (JSON) pour jointure int_offres_all_sources_source."
+    columns:
+      - name: id_offre
+        tests:
+          - not_null
+          - unique
+
+  - name: stg_adzuna_jobs_clean
+    description: "Lignes offre Adzuna pour agrégation int_adzuna_company_metrics."
+    columns:
+      - name: offer_id
+        tests:
+          - not_null
+          - unique
+
+  - name: stg_communes_france
+    description: "Communes France (data.gouv) typées à partir de raw.communes_raw (STRING)."
+    columns:
+      - name: code_insee
+        description: "Code INSEE commune (ex. 01001, 2A001) — toujours STRING."
+        tests:
+          - not_null
+          - unique
+
   - name: int_adzuna_company_metrics
     description: "Métriques agrégées Adzuna par entreprise (company_name_clean)."
     columns:

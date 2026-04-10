@@ -18,6 +18,8 @@ models:
     +persist_docs:
       relation: true
       columns: true
+    staging:
+      +schema: staging
     intermediate:
       +schema: intermediate
     marts:
